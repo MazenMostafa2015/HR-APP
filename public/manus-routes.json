@@ -1,0 +1,1 @@
+{"routes":[{"path":"/","title":"ELMS dashboard"},{"path":"/requests","title":"Leave requests"},{"path":"/requests/new","title":"New leave request"},{"path":"/requests/:id","title":"Leave request detail"},{"path":"/reports","title":"Reports"},{"path":"/admin","title":"Administration"},{"path":"/404","title":"Not found"}]}

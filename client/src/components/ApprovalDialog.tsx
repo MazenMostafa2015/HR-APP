@@ -1,0 +1,10 @@
+import { useState } from "react";
+import { AlertTriangle, CheckCircle2, CircleX } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+export function ApprovalDialog({ open, onOpenChange, requestNumber, decision, loading, onConfirm }: { open: boolean; onOpenChange: (open: boolean) => void; requestNumber: string; decision: "approve" | "reject"; loading?: boolean; onConfirm: (comment: string) => void }) {
+  const [comment, setComment] = useState("");
+  const approve = decision === "approve";
+  return <Dialog open={open} onOpenChange={onOpenChange}><DialogContent><DialogHeader><div className={`decision-icon ${approve ? "approve" : "reject"}`}>{approve ? <CheckCircle2 size={22} /> : <CircleX size={22} />}</div><DialogTitle>{approve ? "Approve" : "Reject"} {requestNumber}?</DialogTitle><DialogDescription>{approve ? "This will move the request to the next required approval tier." : "This will end the request workflow and notify the employee."} The action will be written to the immutable audit trail.</DialogDescription></DialogHeader><label className="field-label">Comment <span>optional</span><textarea className="field-input field-textarea" maxLength={500} value={comment} onChange={event => setComment(event.target.value)} placeholder={approve ? "Add context for the next approver…" : "Tell the employee why this request was rejected…"} /></label><div className="dialog-warning"><AlertTriangle size={15} /> {approve ? "You cannot undo an approval from this screen." : "Rejections cannot be reopened; the employee must submit a new request."}</div><DialogFooter><Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button><Button variant={approve ? "default" : "destructive"} disabled={loading} onClick={() => onConfirm(comment)}>{loading ? "Saving…" : approve ? "Confirm approval" : "Confirm rejection"}</Button></DialogFooter></DialogContent></Dialog>;
+}
