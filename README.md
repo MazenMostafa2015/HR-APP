@@ -38,6 +38,8 @@ pnpm test
 pnpm dev
 ```
 
+Every push to `main` and every pull request targeting `main` also runs the same typecheck, test, and production-build validation in GitHub Actions (`.github/workflows/ci.yml`).
+
 The managed Preview listens on port `3000`. The server exposes `/api/health`, `/api/platform/config.js`, OAuth routes, and the tRPC API under `/api/trpc`. The client is served by Vite in development and the generated `dist` bundle in production.
 
 ### Database
