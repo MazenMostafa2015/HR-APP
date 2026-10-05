@@ -1,7 +1,10 @@
 {
   "name": "elms",
   "version": "1.0.0",
+  "description": "Internal employee leave management desktop client and server",
+  "author": "ELMS",
   "type": "module",
+  "main": "desktop/main.cjs",
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
@@ -14,7 +17,10 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx drizzle/seed.ts",
     "dev:static": "vite --host 0.0.0.0 --port ${PORT:-3000} --strictPort",
-    "build:static": "vite build"
+    "build:static": "vite build",
+    "desktop:dev": "electron desktop/main.cjs",
+    "desktop:dist": "electron-builder --win nsis",
+    "desktop:dist:direct": "pnpm build && electron-builder --win --dir && node desktop/build-installer.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",
@@ -98,6 +104,8 @@
     "autoprefixer": "^10.4.20",
     "drizzle-kit": "^0.31.4",
     "esbuild": "^0.25.0",
+    "electron": "^38.2.1",
+    "electron-builder": "^26.0.12",
     "pnpm": "10.18.0",
     "postcss": "^8.4.47",
     "prettier": "^3.6.2",
@@ -108,5 +116,21 @@
     "vite": "^7.1.7",
     "vitest": "^2.1.4"
   },
-  "packageManager": "pnpm@10.18.0"
+  "packageManager": "pnpm@10.18.0",
+  "build": {
+    "appId": "com.company.elms",
+    "productName": "ELMS Desktop",
+    "asar": true,
+    "files": ["desktop/**/*", "package.json"],
+    "directories": { "output": "release" },
+    "win": { "target": [{ "target": "nsis", "arch": ["x64"] }], "signAndEditExecutable": false },
+    "nsis": {
+      "artifactName": "ELMS-Desktop-Setup.exe",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "ELMS Desktop"
+    }
+  }
 }
