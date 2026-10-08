@@ -140,6 +140,75 @@ Invoke-WebRequest http://127.0.0.1:3000/api/health
 
 Create an internal DNS record pointing `elms-server.company.local` to the server's fixed LAN address. Allow TCP 3000 only from the employee VLAN, or expose HTTPS on 443 through IIS/nginx and keep Node bound behind the proxy. Do not expose the service directly to the public Internet.
 
+### Windows Firewall and port configuration
+
+Choose one of these supported network designs:
+
+| Design | Employee destination | Windows inbound rule | Recommended use |
+|---|---:|---:|---|
+| Direct Node API | `http://elms-server.company.local:3000` | TCP 3000 from the employee subnet only | Small trusted LAN or initial testing |
+| HTTPS reverse proxy | `https://elms-server.company.local` | TCP 443 from the employee subnet only | Production; preferred |
+
+MySQL TCP `3306` must remain local to the server whenever possible. Employees do not connect to MySQL, Node's development ports, SSH, RDP, or any other server port from the desktop app.
+
+#### Direct Node API on TCP 3000
+
+Replace `10.20.30.0/24` with the actual employee subnet or VLAN CIDR. Run these commands in an elevated PowerShell on the server:
+
+```powershell
+$EmployeeSubnet = '10.20.30.0/24'
+New-NetFirewallRule `
+  -DisplayName 'ELMS API from employee VLAN' `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3000 `
+  -RemoteAddress $EmployeeSubnet -Profile Domain,Private
+```
+
+Do not create a broad `Any` remote-address rule. If a previous broad rule exists, disable or remove it after confirming the scoped rule works:
+
+```powershell
+Get-NetFirewallRule -DisplayName '*ELMS*' | Get-NetFirewallPortFilter
+Remove-NetFirewallRule -DisplayName 'ELMS API TCP 3000'
+```
+
+If the server has multiple network adapters, restrict the rule further with `-InterfaceAlias 'Ethernet'` or the approved adapter name. Keep the Windows network profile as **Domain** or **Private**; do not enable an inbound rule on a public profile unless IT explicitly approves it.
+
+#### HTTPS reverse proxy on TCP 443
+
+For production, terminate TLS at IIS or nginx and forward only to the local Node process. Permit inbound 443 from the employee subnet:
+
+```powershell
+$EmployeeSubnet = '10.20.30.0/24'
+New-NetFirewallRule `
+  -DisplayName 'ELMS HTTPS from employee VLAN' `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 `
+  -RemoteAddress $EmployeeSubnet -Profile Domain,Private
+```
+
+Keep TCP 3000 blocked from the employee VLAN when the reverse proxy is in use, unless IT needs temporary direct health diagnostics. The proxy must preserve `/api/*` and `/manus-storage/*`, forward WebSocket/upgrade headers if used by the hosting configuration, and pass the original HTTPS protocol so secure cookies work.
+
+#### DNS and connectivity checks
+
+Create an internal DNS A record such as `elms-server.company.local → 10.20.30.15`. Do not point employee installers at a changing DHCP address. From an employee workstation, verify DNS, TCP reachability, and the application health endpoint:
+
+```powershell
+Resolve-DnsName elms-server.company.local
+Test-NetConnection elms-server.company.local -Port 443
+Invoke-WebRequest https://elms-server.company.local/api/health
+```
+
+For direct Node mode, use port 3000 and `http://` instead. A successful `Test-NetConnection` proves that the port is reachable; the health request proves that the ELMS API is responding. Test from a normal employee VLAN, not only from the server itself.
+
+#### Network security checklist
+
+- Permit only the selected application port: 443 preferred, or 3000 for direct mode.
+- Scope inbound access to the employee subnet or approved VLANs.
+- Do not port-forward ELMS from the Internet to the server.
+- Do not open MySQL 3306 to employees.
+- Use internal DNS and a fixed address/DHCP reservation.
+- Use HTTPS with an internal certificate trusted by employee PCs.
+- If users work remotely, connect them through the approved VPN; do not expose Node directly.
+- Record the firewall rule name, port, subnet, certificate owner, and change date in the IT network register.
+
 If using a reverse proxy, preserve the `/api/*` and `/manus-storage/*` paths and forward the original HTTPS protocol. Test from an employee workstation:
 
 ```powershell
