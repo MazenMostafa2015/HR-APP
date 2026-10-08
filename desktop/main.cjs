@@ -24,10 +24,10 @@ function readConfig() {
   }
 }
 
-function saveConfig(serverUrl) {
+function saveConfig(serverUrl, language = readConfig().language || "en") {
   const normalized = normalizeServerUrl(serverUrl);
   fs.mkdirSync(path.dirname(configPath()), { recursive: true });
-  fs.writeFileSync(configPath(), JSON.stringify({ serverUrl: normalized }, null, 2), "utf8");
+  fs.writeFileSync(configPath(), JSON.stringify({ serverUrl: normalized, language: language === "ar" ? "ar" : "en" }, null, 2), "utf8");
   return normalized;
 }
 
@@ -64,16 +64,17 @@ function createWindow() {
   mainWindow.loadFile(path.join(__dirname, "setup.html"));
 }
 
-ipcMain.handle("elms:get-config", () => ({ serverUrl: readConfig().serverUrl || DEFAULT_SERVER_URL }));
-ipcMain.handle("elms:save-config", (_event, serverUrl) => {
+ipcMain.handle("elms:get-config", () => { const config = readConfig(); return { serverUrl: config.serverUrl || DEFAULT_SERVER_URL, language: config.language === "ar" ? "ar" : "en" }; });
+ipcMain.handle("elms:save-config", (_event, payload) => {
   try {
-    const normalized = saveConfig(serverUrl);
+    const normalized = saveConfig(payload?.serverUrl ?? payload, payload?.language);
     mainWindow.loadURL(normalized);
-    return { ok: true, serverUrl: normalized };
+    return { ok: true, serverUrl: normalized, language: readConfig().language };
   } catch (error) {
     return { ok: false, error: error instanceof Error ? error.message : "Invalid server URL" };
   }
 });
+ipcMain.handle("elms:save-language", (_event, language) => { const config = readConfig(); saveConfig(config.serverUrl || DEFAULT_SERVER_URL, language); return { language: language === "ar" ? "ar" : "en" }; });
 ipcMain.handle("elms:change-server", () => {
   mainWindow.loadFile(path.join(__dirname, "setup.html"));
 });
