@@ -45,6 +45,47 @@ pnpm db:seed
 
 The seed is idempotent and is intended for initial reference data. Review or remove fixture data before production use if required by company policy.
 
+### Employee ID database migration
+
+The Employee ID feature adds a nullable, unique `employeeId` column to the `users` table. Existing users remain valid with an empty Employee ID until HR assigns one. The migration is included in:
+
+```text
+drizzle/0002_conscious_sunset_bain.sql
+```
+
+On an existing installation, apply it from the application directory after configuring `DATABASE_URL`:
+
+```powershell
+Set-Location C:\ProgramData\ELMS
+pnpm install --frozen-lockfile
+pnpm db:migrate
+```
+
+The migration performs these safe changes:
+
+```sql
+ALTER TABLE `users` ADD `employeeId` varchar(64);
+ALTER TABLE `users` ADD CONSTRAINT `users_employee_id_unique` UNIQUE(`employeeId`);
+```
+
+Because the column is nullable, the migration does not require HR to fill IDs before the server can restart. MySQL permits multiple `NULL` values in the unique constraint, but two non-empty Employee IDs cannot be the same.
+
+Verify the migration and the new column:
+
+```powershell
+mysql -u elms_app -p -h 127.0.0.1 -D elms -e "SHOW COLUMNS FROM users LIKE 'employeeId'; SHOW INDEX FROM users WHERE Key_name = 'users_employee_id_unique';"
+```
+
+After the migration, rebuild and restart the API:
+
+```powershell
+pnpm build
+Restart-Service ELMS
+Invoke-WebRequest http://127.0.0.1:3000/api/health
+```
+
+Then sign in as an administrator, open **Administration → People directory**, assign the official Employee IDs, and save each profile. Do not manually edit the migration journal or delete the unique constraint to work around a duplicate; correct the duplicate value in the People directory first.
+
 ## 3. Environment configuration
 
 Copy `.env.internal.example` to `.env` and set every `REPLACE_` value. At minimum configure:
@@ -129,7 +170,16 @@ The server URL is stored per Windows user under the Electron application data fo
 
 ## 8. Upgrade and backup runbook
 
-For an upgrade, back up MySQL and `STORAGE_PATH`, stop the service, replace the application files, run `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm db:migrate`, and restart the service. Keep the previous release available for rollback. Never run destructive schema resets against production.
+For an upgrade, back up MySQL and `STORAGE_PATH`, stop the service, replace the application files, run `pnpm install --frozen-lockfile`, `pnpm db:migrate`, `pnpm build`, and restart the service. When upgrading to the Employee ID release, verify that `drizzle/0002_conscious_sunset_bain.sql` is present and that `pnpm db:migrate` completes before starting the new API. Keep the previous release available for rollback. Never run destructive schema resets against production.
+
+Before the migration, take a database backup and record the current migration state:
+
+```powershell
+mysqldump -u elms_app -p --single-transaction --routines --triggers elms > D:\ELMS-Backups\before-employee-id.sql
+mysql -u elms_app -p -h 127.0.0.1 -D elms -e "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
+```
+
+The Employee ID migration is additive and does not remove existing data. If the deployment must be rolled back, restore the previous application release and keep the new nullable column in place; the older application can safely ignore an additional column. Do not reverse the migration by dropping `employeeId` unless a database administrator has confirmed that no Employee ID values are needed and has a verified backup.
 
 Back up together:
 
