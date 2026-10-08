@@ -20,7 +20,8 @@
     "build:static": "vite build",
     "desktop:dev": "electron desktop/main.cjs",
     "desktop:dist": "electron-builder --win nsis",
-    "desktop:dist:direct": "pnpm build && electron-builder --win --dir && node desktop/build-installer.cjs"
+    "desktop:dist:direct": "pnpm build && electron-builder --win --dir && node desktop/build-installer.cjs",
+    "server:prerequisites:dist": "node deploy/build-prerequisites-installer.cjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.693.0",

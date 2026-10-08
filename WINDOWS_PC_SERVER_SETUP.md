@@ -58,6 +58,10 @@ Use a dedicated local or domain service identity for the API service. It should 
 
 ### 2.2 Install Git and Node.js
 
+For the fastest supported setup, IT can run `release\ELMS-Server-Prerequisites-Setup.exe` as Administrator. It downloads and installs Node.js 22.23.3 LTS with npm, Git for Windows 2.56.0.2, and pnpm 10.18.0 through Corepack. The installer verifies SHA-256 checksums and prints the installed versions. It does not install MySQL or the ELMS application backend.
+
+If the prerequisite installer is not available, install the tools manually as described below.
+
 Install:
 
 - **Node.js 22 LTS**

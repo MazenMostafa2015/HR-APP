@@ -195,3 +195,36 @@ Back up together:
 - **Uploads fail:** verify `STORAGE_MODE`, `STORAGE_PATH`, service-account permissions, and free disk space.
 - **Emails are not sent:** verify SMTP values and inspect the durable notification outbox in the database.
 - **Database errors:** verify MySQL is running, `DATABASE_URL` is correct, and migrations have been applied.
+
+### Server prerequisite installer
+
+For a new Windows host, IT can run the separate `ELMS-Server-Prerequisites-Setup.exe` before installing MySQL and the ELMS backend. This installer is for the central server only; do not distribute it to ordinary employee PCs.
+
+It installs and verifies:
+
+- Node.js 22.23.3 LTS, including npm
+- Git for Windows 2.56.0.2 (64-bit)
+- pnpm 10.18.0 through Corepack, with an npm fallback if Corepack cannot activate it
+
+The installer downloads the vendor installers over HTTPS, verifies the embedded SHA-256 checksums, requires Windows Administrator rights, and prints the installed versions. It does not install MySQL, configure OAuth, create the ELMS database, or start the backend service. Continue with the MySQL and server setup steps after it completes.
+
+Build it from the repository root with:
+
+```powershell
+pnpm server:prerequisites:dist
+```
+
+The output is:
+
+```text
+release\ELMS-Server-Prerequisites-Setup.exe
+```
+
+Run the installer once on the designated server PC, open a new elevated PowerShell, and verify:
+
+```powershell
+node --version
+npm --version
+pnpm --version
+git --version
+```
