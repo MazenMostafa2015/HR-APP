@@ -20,7 +20,7 @@ New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
 New-Item -ItemType Directory -Force -Path (Join-Path $InstallDir 'storage') | Out-Null
 
 Write-Host 'Copying application files…'
-robocopy $RepoRoot $InstallDir /E /XD node_modules dist release .git /XF .env .env.* | Out-Null
+C:\Windows\System32\robocopy.exe $RepoRoot $InstallDir /E /XD node_modules dist release .git /XF .env .env.* | Out-Null
 Set-Location $InstallDir
 
 if (-not (Test-Path '.env')) {
