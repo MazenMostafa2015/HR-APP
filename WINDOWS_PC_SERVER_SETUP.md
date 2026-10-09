@@ -58,6 +58,10 @@ Use a dedicated local or domain service identity for the API service. It should 
 
 ### 2.2 Install Git and Node.js
 
+For the fastest supported setup, IT can run `release\ELMS-Server-Prerequisites-Setup.exe` as Administrator. It downloads and installs Node.js 22.23.3 LTS with npm, Git for Windows 2.56.0.2, and pnpm 10.18.0 through Corepack. The installer verifies SHA-256 checksums and prints the installed versions. It does not install MySQL or the ELMS application backend.
+
+If the prerequisite installer is not available, install the tools manually as described below.
+
 Install:
 
 - **Node.js 22 LTS**
@@ -390,6 +394,28 @@ New-NetFirewallRule `
 ```
 
 Do not create a Public-profile rule for the API. Do not open MySQL port `3306` to employee PCs.
+
+If the reverse proxy is serving HTTPS, allow only TCP 443 from the employee subnet and keep direct Node access restricted:
+
+```powershell
+New-NetFirewallRule `
+  -DisplayName 'ELMS HTTPS from employee VLAN' `
+  -Direction Inbound `
+  -Protocol TCP `
+  -LocalPort 443 `
+  -Action Allow `
+  -Profile Domain,Private `
+  -RemoteAddress 192.168.10.0/24
+```
+
+After creating or changing a rule, test from an employee workstation, not only from the server:
+
+```powershell
+Test-NetConnection elms-server.company.local -Port 443
+Invoke-WebRequest https://elms-server.company.local/api/health
+```
+
+For direct Node mode, test port 3000 and use the matching `http://` URL. The desktop application needs only the selected application port. It does not need access to MySQL 3306, RDP, SSH, or any development port.
 
 ### 7.3 HTTPS recommendation
 

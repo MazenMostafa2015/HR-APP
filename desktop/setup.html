@@ -1,46 +1,20 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>ELMS Desktop Setup</title>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" /><title>ELMS Desktop Setup</title>
   <style>
-    :root { font-family: Segoe UI, Arial, sans-serif; color: #17313a; background: #f5f7f8; }
-    body { min-height: 100vh; margin: 0; display: grid; place-items: center; }
-    main { width: min(560px, calc(100vw - 48px)); padding: 42px; background: white; border: 1px solid #dce6e8; border-radius: 18px; box-shadow: 0 18px 50px rgba(22, 48, 56, .12); }
-    .mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #1b8e8a; color: white; font-size: 24px; font-weight: 800; }
-    h1 { margin: 22px 0 8px; font-size: 30px; } p { color: #587078; line-height: 1.55; }
-    label { display: block; margin-top: 26px; font-weight: 700; font-size: 14px; }
-    input { box-sizing: border-box; width: 100%; margin-top: 8px; padding: 13px 14px; border: 1px solid #b9cdd1; border-radius: 9px; font-size: 16px; }
-    button { margin-top: 18px; padding: 13px 18px; border: 0; border-radius: 9px; background: #1b8e8a; color: white; font-size: 15px; font-weight: 700; cursor: pointer; }
-    button:disabled { opacity: .65; cursor: wait; } #message { min-height: 24px; margin-top: 14px; color: #b53a3a; }
-    .hint { margin-top: 24px; font-size: 13px; }
+    :root { font-family: Segoe UI, Arial, sans-serif; color: #17313a; background: #f5f7f8; } body { min-height: 100vh; margin: 0; display: grid; place-items: center; } main { width: min(560px, calc(100vw - 48px)); padding: 42px; background: white; border: 1px solid #dce6e8; border-radius: 18px; box-shadow: 0 18px 50px rgba(22, 48, 56, .12); } .top { display: flex; justify-content: space-between; align-items: center; } .mark { width: 48px; height: 48px; display: grid; place-items: center; border-radius: 14px; background: #1b8e8a; color: white; font-size: 24px; font-weight: 800; } .language { border: 1px solid #b9cdd1; border-radius: 999px; background: white; color: #126d6a; padding: 8px 12px; font-weight: 700; cursor: pointer; } h1 { margin: 22px 0 8px; font-size: 30px; } p { color: #587078; line-height: 1.55; } label { display: block; margin-top: 26px; font-weight: 700; font-size: 14px; } input { box-sizing: border-box; width: 100%; margin-top: 8px; padding: 13px 14px; border: 1px solid #b9cdd1; border-radius: 9px; font-size: 16px; } button.submit { margin-top: 18px; padding: 13px 18px; border: 0; border-radius: 9px; background: #1b8e8a; color: white; font-size: 15px; font-weight: 700; cursor: pointer; } button:disabled { opacity: .65; cursor: wait; } #message { min-height: 24px; margin-top: 14px; color: #b53a3a; } .hint { margin-top: 24px; font-size: 13px; }
   </style>
 </head>
 <body>
-  <main>
-    <div class="mark">E</div>
-    <h1>Connect to your ELMS server</h1>
-    <p>Enter the address provided by your IT administrator. The desktop application stores only this address; all data, authentication, approvals, and attachments remain on the internal server.</p>
-    <form id="form">
-      <label for="serverUrl">Internal server URL</label>
-      <input id="serverUrl" type="url" required placeholder="https://elms.company.local" autocomplete="url" />
-      <button id="save" type="submit">Open ELMS</button>
-      <div id="message" role="alert"></div>
-    </form>
-    <p class="hint">Use HTTPS whenever possible. Example: <strong>https://elms-server.company.local</strong></p>
-  </main>
+  <main><div class="top"><div class="mark">E</div><button id="language" class="language" type="button">العربية</button></div><h1 id="title">Connect to your ELMS server</h1><p id="description">Enter the address provided by your IT administrator. The desktop application stores only this address; all data, authentication, approvals, and attachments remain on the internal server.</p><form id="form"><label id="serverLabel" for="serverUrl">Internal server URL</label><input id="serverUrl" type="url" required placeholder="https://elms.company.local" autocomplete="url" /><button id="save" class="submit" type="submit">Open ELMS</button><div id="message" role="alert"></div></form><p id="hint" class="hint">Use HTTPS whenever possible. Example: <strong>https://elms-server.company.local</strong></p></main>
   <script>
-    const form = document.querySelector('#form');
-    const input = document.querySelector('#serverUrl');
-    const button = document.querySelector('#save');
-    const message = document.querySelector('#message');
-    window.elmsDesktop.getConfig().then(config => { input.value = config.serverUrl || ''; });
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault(); button.disabled = true; message.textContent = 'Connecting…';
-      const result = await window.elmsDesktop.saveConfig(input.value);
-      if (!result.ok) { button.disabled = false; message.textContent = result.error; }
-    });
+    const strings = { en: { title: 'Connect to your ELMS server', description: 'Enter the address provided by your IT administrator. The desktop application stores only this address; all data, authentication, approvals, and attachments remain on the internal server.', server: 'Internal server URL', open: 'Open ELMS', connecting: 'Connecting…', hint: 'Use HTTPS whenever possible. Example: <strong>https://elms-server.company.local</strong>', switch: 'العربية' }, ar: { title: 'الاتصال بخادم ELMS', description: 'أدخل العنوان الذي زودك به مسؤول تقنية المعلومات. يحتفظ تطبيق سطح المكتب بالعنوان فقط، بينما تبقى جميع البيانات وتسجيل الدخول والاعتمادات والمرفقات على الخادم الداخلي.', server: 'رابط الخادم الداخلي', open: 'فتح ELMS', connecting: 'جارٍ الاتصال…', hint: 'استخدم HTTPS كلما أمكن. مثال: <strong>https://elms-server.company.local</strong>', switch: 'English' } };
+    let language = 'en'; const form = document.querySelector('#form'); const input = document.querySelector('#serverUrl'); const button = document.querySelector('#save'); const message = document.querySelector('#message');
+    const applyLanguage = () => { const s = strings[language]; document.documentElement.lang = language; document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr'; document.querySelector('#title').textContent = s.title; document.querySelector('#description').textContent = s.description; document.querySelector('#serverLabel').textContent = s.server; button.textContent = s.open; document.querySelector('#hint').innerHTML = s.hint; document.querySelector('#language').textContent = s.switch; };
+    window.elmsDesktop.getConfig().then(config => { input.value = config.serverUrl || ''; language = config.language === 'ar' ? 'ar' : 'en'; applyLanguage(); });
+    document.querySelector('#language').addEventListener('click', async () => { language = language === 'en' ? 'ar' : 'en'; applyLanguage(); await window.elmsDesktop.saveLanguage(language); });
+    form.addEventListener('submit', async (event) => { event.preventDefault(); button.disabled = true; message.textContent = strings[language].connecting; const result = await window.elmsDesktop.saveConfig({ serverUrl: input.value, language }); if (!result.ok) { button.disabled = false; message.textContent = result.error; } });
   </script>
 </body>
 </html>

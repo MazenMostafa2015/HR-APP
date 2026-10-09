@@ -28,6 +28,7 @@ export const users = mysqlTable(
   {
     id: int("id").autoincrement().primaryKey(),
     openId: varchar("openId", { length: 64 }).notNull().unique(),
+    employeeId: varchar("employeeId", { length: 64 }),
     name: text("name"),
     email: varchar("email", { length: 320 }),
     loginMethod: varchar("loginMethod", { length: 64 }),
@@ -39,7 +40,7 @@ export const users = mysqlTable(
     updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
     lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
   },
-  table => ({ departmentIdx: index("users_department_idx").on(table.departmentId), managerIdx: index("users_manager_idx").on(table.managerId) })
+  table => ({ employeeIdIdx: uniqueIndex("users_employee_id_unique").on(table.employeeId), departmentIdx: index("users_department_idx").on(table.departmentId), managerIdx: index("users_manager_idx").on(table.managerId) })
 );
 
 export const leaveTypes = mysqlTable(

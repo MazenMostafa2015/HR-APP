@@ -45,6 +45,47 @@ pnpm db:seed
 
 The seed is idempotent and is intended for initial reference data. Review or remove fixture data before production use if required by company policy.
 
+### Employee ID database migration
+
+The Employee ID feature adds a nullable, unique `employeeId` column to the `users` table. Existing users remain valid with an empty Employee ID until HR assigns one. The migration is included in:
+
+```text
+drizzle/0002_conscious_sunset_bain.sql
+```
+
+On an existing installation, apply it from the application directory after configuring `DATABASE_URL`:
+
+```powershell
+Set-Location C:\ProgramData\ELMS
+pnpm install --frozen-lockfile
+pnpm db:migrate
+```
+
+The migration performs these safe changes:
+
+```sql
+ALTER TABLE `users` ADD `employeeId` varchar(64);
+ALTER TABLE `users` ADD CONSTRAINT `users_employee_id_unique` UNIQUE(`employeeId`);
+```
+
+Because the column is nullable, the migration does not require HR to fill IDs before the server can restart. MySQL permits multiple `NULL` values in the unique constraint, but two non-empty Employee IDs cannot be the same.
+
+Verify the migration and the new column:
+
+```powershell
+mysql -u elms_app -p -h 127.0.0.1 -D elms -e "SHOW COLUMNS FROM users LIKE 'employeeId'; SHOW INDEX FROM users WHERE Key_name = 'users_employee_id_unique';"
+```
+
+After the migration, rebuild and restart the API:
+
+```powershell
+pnpm build
+Restart-Service ELMS
+Invoke-WebRequest http://127.0.0.1:3000/api/health
+```
+
+Then sign in as an administrator, open **Administration → People directory**, assign the official Employee IDs, and save each profile. Do not manually edit the migration journal or delete the unique constraint to work around a duplicate; correct the duplicate value in the People directory first.
+
 ## 3. Environment configuration
 
 Copy `.env.internal.example` to `.env` and set every `REPLACE_` value. At minimum configure:
@@ -99,6 +140,75 @@ Invoke-WebRequest http://127.0.0.1:3000/api/health
 
 Create an internal DNS record pointing `elms-server.company.local` to the server's fixed LAN address. Allow TCP 3000 only from the employee VLAN, or expose HTTPS on 443 through IIS/nginx and keep Node bound behind the proxy. Do not expose the service directly to the public Internet.
 
+### Windows Firewall and port configuration
+
+Choose one of these supported network designs:
+
+| Design | Employee destination | Windows inbound rule | Recommended use |
+|---|---:|---:|---|
+| Direct Node API | `http://elms-server.company.local:3000` | TCP 3000 from the employee subnet only | Small trusted LAN or initial testing |
+| HTTPS reverse proxy | `https://elms-server.company.local` | TCP 443 from the employee subnet only | Production; preferred |
+
+MySQL TCP `3306` must remain local to the server whenever possible. Employees do not connect to MySQL, Node's development ports, SSH, RDP, or any other server port from the desktop app.
+
+#### Direct Node API on TCP 3000
+
+Replace `10.20.30.0/24` with the actual employee subnet or VLAN CIDR. Run these commands in an elevated PowerShell on the server:
+
+```powershell
+$EmployeeSubnet = '10.20.30.0/24'
+New-NetFirewallRule `
+  -DisplayName 'ELMS API from employee VLAN' `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 3000 `
+  -RemoteAddress $EmployeeSubnet -Profile Domain,Private
+```
+
+Do not create a broad `Any` remote-address rule. If a previous broad rule exists, disable or remove it after confirming the scoped rule works:
+
+```powershell
+Get-NetFirewallRule -DisplayName '*ELMS*' | Get-NetFirewallPortFilter
+Remove-NetFirewallRule -DisplayName 'ELMS API TCP 3000'
+```
+
+If the server has multiple network adapters, restrict the rule further with `-InterfaceAlias 'Ethernet'` or the approved adapter name. Keep the Windows network profile as **Domain** or **Private**; do not enable an inbound rule on a public profile unless IT explicitly approves it.
+
+#### HTTPS reverse proxy on TCP 443
+
+For production, terminate TLS at IIS or nginx and forward only to the local Node process. Permit inbound 443 from the employee subnet:
+
+```powershell
+$EmployeeSubnet = '10.20.30.0/24'
+New-NetFirewallRule `
+  -DisplayName 'ELMS HTTPS from employee VLAN' `
+  -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 `
+  -RemoteAddress $EmployeeSubnet -Profile Domain,Private
+```
+
+Keep TCP 3000 blocked from the employee VLAN when the reverse proxy is in use, unless IT needs temporary direct health diagnostics. The proxy must preserve `/api/*` and `/manus-storage/*`, forward WebSocket/upgrade headers if used by the hosting configuration, and pass the original HTTPS protocol so secure cookies work.
+
+#### DNS and connectivity checks
+
+Create an internal DNS A record such as `elms-server.company.local → 10.20.30.15`. Do not point employee installers at a changing DHCP address. From an employee workstation, verify DNS, TCP reachability, and the application health endpoint:
+
+```powershell
+Resolve-DnsName elms-server.company.local
+Test-NetConnection elms-server.company.local -Port 443
+Invoke-WebRequest https://elms-server.company.local/api/health
+```
+
+For direct Node mode, use port 3000 and `http://` instead. A successful `Test-NetConnection` proves that the port is reachable; the health request proves that the ELMS API is responding. Test from a normal employee VLAN, not only from the server itself.
+
+#### Network security checklist
+
+- Permit only the selected application port: 443 preferred, or 3000 for direct mode.
+- Scope inbound access to the employee subnet or approved VLANs.
+- Do not port-forward ELMS from the Internet to the server.
+- Do not open MySQL 3306 to employees.
+- Use internal DNS and a fixed address/DHCP reservation.
+- Use HTTPS with an internal certificate trusted by employee PCs.
+- If users work remotely, connect them through the approved VPN; do not expose Node directly.
+- Record the firewall rule name, port, subnet, certificate owner, and change date in the IT network register.
+
 If using a reverse proxy, preserve the `/api/*` and `/manus-storage/*` paths and forward the original HTTPS protocol. Test from an employee workstation:
 
 ```powershell
@@ -129,7 +239,16 @@ The server URL is stored per Windows user under the Electron application data fo
 
 ## 8. Upgrade and backup runbook
 
-For an upgrade, back up MySQL and `STORAGE_PATH`, stop the service, replace the application files, run `pnpm install --frozen-lockfile`, `pnpm build`, `pnpm db:migrate`, and restart the service. Keep the previous release available for rollback. Never run destructive schema resets against production.
+For an upgrade, back up MySQL and `STORAGE_PATH`, stop the service, replace the application files, run `pnpm install --frozen-lockfile`, `pnpm db:migrate`, `pnpm build`, and restart the service. When upgrading to the Employee ID release, verify that `drizzle/0002_conscious_sunset_bain.sql` is present and that `pnpm db:migrate` completes before starting the new API. Keep the previous release available for rollback. Never run destructive schema resets against production.
+
+Before the migration, take a database backup and record the current migration state:
+
+```powershell
+mysqldump -u elms_app -p --single-transaction --routines --triggers elms > D:\ELMS-Backups\before-employee-id.sql
+mysql -u elms_app -p -h 127.0.0.1 -D elms -e "SELECT * FROM __drizzle_migrations ORDER BY created_at DESC LIMIT 5;"
+```
+
+The Employee ID migration is additive and does not remove existing data. If the deployment must be rolled back, restore the previous application release and keep the new nullable column in place; the older application can safely ignore an additional column. Do not reverse the migration by dropping `employeeId` unless a database administrator has confirmed that no Employee ID values are needed and has a verified backup.
 
 Back up together:
 
@@ -145,3 +264,36 @@ Back up together:
 - **Uploads fail:** verify `STORAGE_MODE`, `STORAGE_PATH`, service-account permissions, and free disk space.
 - **Emails are not sent:** verify SMTP values and inspect the durable notification outbox in the database.
 - **Database errors:** verify MySQL is running, `DATABASE_URL` is correct, and migrations have been applied.
+
+### Server prerequisite installer
+
+For a new Windows host, IT can run the separate `ELMS-Server-Prerequisites-Setup.exe` before installing MySQL and the ELMS backend. This installer is for the central server only; do not distribute it to ordinary employee PCs.
+
+It installs and verifies:
+
+- Node.js 22.23.3 LTS, including npm
+- Git for Windows 2.56.0.2 (64-bit)
+- pnpm 10.18.0 through Corepack, with an npm fallback if Corepack cannot activate it
+
+The installer downloads the vendor installers over HTTPS, verifies the embedded SHA-256 checksums, requires Windows Administrator rights, and prints the installed versions. It does not install MySQL, configure OAuth, create the ELMS database, or start the backend service. Continue with the MySQL and server setup steps after it completes.
+
+Build it from the repository root with:
+
+```powershell
+pnpm server:prerequisites:dist
+```
+
+The output is:
+
+```text
+release\ELMS-Server-Prerequisites-Setup.exe
+```
+
+Run the installer once on the designated server PC, open a new elevated PowerShell, and verify:
+
+```powershell
+node --version
+npm --version
+pnpm --version
+git --version
+```
