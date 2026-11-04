@@ -23,7 +23,8 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 .\deploy\install-server.ps1
 ```
 
-The script installs dependencies, builds the production bundle, runs migrations and seed data, creates the local storage directory, and opens the configured TCP port. It creates `.env` on the first run and stops so IT can edit secrets.
+The script installs dependencies, builds the production bundle, runs migrations and seed data, creates the local storage directory, and opens the configured TCP port. 
+It creates `.env` on the first run and stops so IT can edit secrets.
 
 ## 2. MySQL setup
 
