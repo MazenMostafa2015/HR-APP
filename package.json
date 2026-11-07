@@ -2,7 +2,7 @@
   "name": "elms",
   "version": "1.0.0",
   "description": "Internal employee leave management desktop client and server",
-  "author": "ELMS",
+  "author": "Mostafa Zeada",
   "type": "module",
   "main": "desktop/main.cjs",
   "license": "MIT",

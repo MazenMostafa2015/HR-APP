@@ -79,3 +79,26 @@ createRoot(document.getElementById("root")!).render(
     </QueryClientProvider>
   </trpc.Provider>
 );
+
+
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  const registerServiceWorker = async () => {
+    try {
+      const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+      const checkForUpdates = () => {
+        void registration.update().catch(error => {
+          console.warn("[PWA] Service worker update check failed:", error);
+        });
+      };
+
+      window.addEventListener("focus", checkForUpdates);
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") checkForUpdates();
+      });
+    } catch (error) {
+      console.warn("[PWA] Service worker registration failed:", error);
+    }
+  };
+
+  void registerServiceWorker();
+}
