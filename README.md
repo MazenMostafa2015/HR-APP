@@ -81,6 +81,12 @@ HR and Admin can filter reports by date, review pending/approved/rejected ratios
 
 The generated Dockerfile builds the Vite client and bundled Express server, honors `PORT`, and serves `/api/health` without authentication. Managed publication uses the committed build configuration. Public publication is intentionally not enabled by default; a checkpoint is safe to preview and review before a separate publication decision.
 
+## Recommended client
+
+The PWA is the recommended client. The Electron desktop client is retained for legacy compatibility only. The `desktop/` folder and desktop build scripts remain available; they are not removed by the PWA conversion.
+
+See [PWA_DEPLOYMENT.md](PWA_DEPLOYMENT.md) for HTTPS/reverse-proxy setup, Caddy root-CA installation, environment settings, and a browser verification checklist.
+
 ## Project files
 
 - `drizzle/schema.ts` — relational schema and status enums.

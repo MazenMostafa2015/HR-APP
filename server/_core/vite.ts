@@ -58,7 +58,17 @@ export function serveStatic(app: Express) {
     );
   }
 
-  app.use(express.static(distPath));
+  app.use(express.static(distPath, {
+    setHeaders: (response, filePath) => {
+      const fileName = path.basename(filePath).toLowerCase();
+      if (fileName === "manifest.webmanifest") {
+        response.setHeader("Content-Type", "application/manifest+json; charset=utf-8");
+      } else if (fileName === "sw.js") {
+        response.setHeader("Content-Type", "application/javascript; charset=utf-8");
+        response.setHeader("Cache-Control", "no-cache");
+      }
+    },
+  }));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
